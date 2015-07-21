@@ -1,5 +1,9 @@
-// July 17, 2015
-// See docs.pub.couchbase.com/couchbase-sdk-java-1.4/#hello-couchbase
+// SimpleConnectionTest
+// Started July 17, 2015
+//
+// For reference please see the following
+// * http://docs.pub.couchbase.com/couchbase-sdk-java-1.4/
+// * http://docs.pub.couchbase.com/couchbase-sdk-java-1.4/#hello-couchbase
 
 package com.couchbase.support;
 
@@ -11,10 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.internal.OperationFuture;
 
 import com.couchbase.client.CouchbaseClient;
 import com.couchbase.client.CouchbaseConnectionFactory;
@@ -26,11 +26,18 @@ class NetworkCheckThread implements Runnable {
 		return timeOfLastException;
 	}
 	
+	public int getTotalExceptionsSeen() {
+		return totalExceptionsSeen;
+		
+	}
+	
 	private long timeOfLastException;
+	private int totalExceptionsSeen;
 	
 	public void run() {
 	
 		timeOfLastException = 0;
+		totalExceptionsSeen = 0;
 		
 		long t1 = 0, t2 = 0;
 		
@@ -40,18 +47,20 @@ class NetworkCheckThread implements Runnable {
 
 			try {
 				URL tryGoogle = new URL("http://www.google.com");
-				HttpURLConnection foo = (HttpURLConnection) tryGoogle.openConnection();
-				foo.setConnectTimeout(500);
-				foo.setReadTimeout(500);
+				HttpURLConnection urlConnection = (HttpURLConnection) tryGoogle.openConnection();
+				urlConnection.setConnectTimeout(500);
+				urlConnection.setReadTimeout(500);
 
-				foo.setRequestMethod("GET");
-				int responseCode = foo.getResponseCode();
+				urlConnection.setRequestMethod("GET");
+				int responseCode = urlConnection.getResponseCode();
 
 				t2 = System.currentTimeMillis();
-				System.out.println("NetworkCheckThread: Google says " + responseCode + " after about " + ( t2 - t1 ) + " ms");
+				System.out.println("NetworkCheckThread: Google says " + responseCode 
+						+ " after about " + ( t2 - t1 ) + " ms");
 			}
 			catch (Exception e) {
 				timeOfLastException = System.currentTimeMillis();
+				totalExceptionsSeen++;
 				t2 = System.currentTimeMillis();
 				System.out.println("NetworkCheckThread: Saw an exception.  Was blocked for about " + ( t2 - t1 ) + " ms");
 			}
@@ -125,7 +134,8 @@ public class SimpleConnectionTest {
 				Date date = new Date();
 				String formattedDate = dateFormat.format(date);
 				
-				System.out.println("################### Top of main loop - " + formattedDate + " (" + documentKey + ") ###################");
+				System.out.println("################### Top of main loop - " + formattedDate 
+						+ " (" + documentKey + ") ###################");
 
 				System.out.println("About to call set()");
 				try {
@@ -162,27 +172,32 @@ public class SimpleConnectionTest {
 				}
 				
 				System.out.printf("Exceptions during Set: %d Get: %d                 # times get() was null: %d  docs match: %d  no match: %d\n", 
-						exceptionDuringSet, exceptionDuringGet, returnedDocumentWasNull, documentsMatch, documentsDontMatch);
+						exceptionDuringSet, exceptionDuringGet, returnedDocumentWasNull, 
+						documentsMatch, documentsDontMatch);
 				
 				if (lastSetExceptionTime == 0) {
 					System.out.println("Have not seen a set() exception");
 				}
 				else {
-					System.out.println("Time since last set() exception:" + ( System.currentTimeMillis() - lastSetExceptionTime ));
+					System.out.println("Time since last set() exception:" + 
+							( System.currentTimeMillis() - lastSetExceptionTime ));
 				}
 
 				if (lastGetExceptionTime == 0) {
 					System.out.println("Have not seen a get() exception");
 				}
 				else {
-					System.out.println("Time since last get() exception:" + ( System.currentTimeMillis() - lastGetExceptionTime ));
+					System.out.println("Time since last get() exception:" + 
+							( System.currentTimeMillis() - lastGetExceptionTime ));
 				}
 
 				if (nct.getTimeOFLastException() == 0) {
 					System.out.println("Have not seen a Google exception");
 				}
 				else {
-					System.out.println("Time since last Google exception:" + ( System.currentTimeMillis() - nct.getTimeOFLastException() ));
+					System.out.println("Time since last Google exception:" + 
+							( System.currentTimeMillis() - nct.getTimeOFLastException() )
+							+ " Total seen: " + nct.getTotalExceptionsSeen());
 				}
 				
 				
