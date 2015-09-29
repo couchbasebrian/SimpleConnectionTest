@@ -1,5 +1,6 @@
 // SimpleConnectionTest
 // Started July 17, 2015
+// Updated September 29, 2015
 //
 // For reference please see the following
 // * http://docs.pub.couchbase.com/couchbase-sdk-java-1.4/
@@ -91,12 +92,11 @@ public class SimpleConnectionTest {
 			
 			List<URI> uriList = new ArrayList<URI>();
 			URI u = new URI("http://10.4.2.121:8091/pools");
-			//URI u = new URI("http://192.168.42.101:8091/pools");
 			uriList.add(u);
 			String bucketname = "BUCKETNAME", password = "";
 			
 			CouchbaseConnectionFactoryBuilder cfb = new CouchbaseConnectionFactoryBuilder();
-			cfb.setOpTimeout(500);
+			cfb.setOpTimeout(25);
 			// cfb.setTimeoutExceptionThreshold(0);
 			// cfb.setOpQueueMaxBlockTime(500);
 			
@@ -106,10 +106,8 @@ public class SimpleConnectionTest {
 
 			CouchbaseConnectionFactory cf = cfb.buildCouchbaseConnection(uriList, bucketname, password);
 			CouchbaseClient cc = new CouchbaseClient(cf);
-
-			// CouchbaseClient cc = new CouchbaseClient(uriList, bucketname, password);
 		
-			int MAXBUCKETNUMBER = 100000;
+			int MAXDOCUMENTNUMBER = 100000;
 			String documentValue = "This is my document";
 			String returnedDocument = null;
 			
@@ -118,7 +116,6 @@ public class SimpleConnectionTest {
 			int documentsDontMatch = 0;
 			int exceptionDuringSet = 0;
 			int exceptionDuringGet = 0;
-			boolean addIsDone = false;
 			
 			long lastSetExceptionTime = 0;
 			long lastGetExceptionTime = 0;
@@ -127,19 +124,26 @@ public class SimpleConnectionTest {
 			
 			while (keepGoing) {
 
-				int randomIdentifier = (int) (Math.random() * MAXBUCKETNUMBER);
+				// Choose a document key at random
+				int randomIdentifier = (int) (Math.random() * MAXDOCUMENTNUMBER);
 				String documentKey = "document" + randomIdentifier;
 
 				DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 				Date date = new Date();
 				String formattedDate = dateFormat.format(date);
 				
+				long t1, t2;
+				
 				System.out.println("################### Top of main loop - " + formattedDate 
 						+ " (" + documentKey + ") ###################");
 
+				// Do a set to write the document to Couchbase
 				System.out.println("About to call set()");
 				try {
-					addIsDone = cc.set(documentKey, documentValue).get();
+					t1 = System.currentTimeMillis();
+					cc.set(documentKey, documentValue);
+					t2 = System.currentTimeMillis();
+					System.out.println("set() took " + ( t2 - t1 ) + " ms");
 				}
 				catch (Exception e) {
 					System.out.println("################### Exception during set() ###################");
@@ -150,7 +154,10 @@ public class SimpleConnectionTest {
 				
 				System.out.println("About to call get()");
 				try {
+					t1 = System.currentTimeMillis();
 					returnedDocument = (String) cc.get(documentKey);
+					t2 = System.currentTimeMillis();
+					System.out.println("get() took " + ( t2 - t1 ) + " ms");
 				}
 				catch (Exception e) {
 					System.out.println("################### Exception during get() ###################");
